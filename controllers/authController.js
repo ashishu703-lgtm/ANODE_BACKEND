@@ -1,64 +1,76 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { query } = require('../config/database');
+const AdminDepartmentUser = require('../models/AdminDepartmentUser');
+const SuperAdmin = require('../models/SuperAdmin');
 const logger = require('../utils/logger');
 
-// Generate JWT token
-const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+// Generate JWT token with subject type
+const generateToken = (subject) => {
+  return jwt.sign(subject, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '24h'
   });
 };
 
-// @desc    Register user
+// @desc    Register user (SuperAdmin only)
 // @route   POST /api/auth/register
-// @access  Public
+// @access  Private (SuperAdmin)
 const register = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, departmentType, companyName, role, headUser } = req.body;
 
     // Check if user already exists
-    const existingUser = await query(
-      'SELECT id FROM users WHERE email = $1 OR username = $2',
-      [email, username]
-    );
-
-    if (existingUser.rows.length > 0) {
+    const existingUser = await AdminDepartmentUser.findByEmail(email);
+    if (existingUser) {
       return res.status(400).json({
         success: false,
-        error: 'User with this email or username already exists'
+        error: 'User with this email already exists'
       });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(12);
-    const passwordHash = await bcrypt.hash(password, salt);
+    const existingUsername = await AdminDepartmentUser.findByUsername(username);
+    if (existingUsername) {
+      return res.status(400).json({
+        success: false,
+        error: 'User with this username already exists'
+      });
+    }
 
-    // Create user
-    const result = await query(
-      `INSERT INTO users (username, email, password_hash)
-       VALUES ($1, $2, $3)
-       RETURNING id, username, email, role, created_at`,
-      [username, email, passwordHash]
-    );
+    // Block creating superadmin here
+    if (role === 'superadmin') {
+      return res.status(400).json({ success: false, error: 'Cannot create superadmin via this endpoint' });
+    }
 
-    const user = result.rows[0];
+    // Create user using AdminDepartmentUser model
+    const userData = {
+      username,
+      email,
+      password,
+      departmentType,
+      companyName,
+      role,
+      headUser: headUser,
+      createdBy: req.user?.id || 1 // Default to 1 if no authenticated user
+    };
+
+    const newUser = await AdminDepartmentUser.create(userData);
 
     // Generate token
-    const token = generateToken(user.id);
+    const token = generateToken({ id: newUser.id, type: 'department_user' });
 
-    logger.info('User registered successfully', { userId: user.id, email });
+    logger.info('User registered successfully', { userId: newUser.id, email });
 
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
       data: {
         user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          createdAt: user.created_at
+          id: newUser.id,
+          username: newUser.username,
+          email: newUser.email,
+          role: newUser.role,
+          departmentType: newUser.departmentType,
+          companyName: newUser.companyName,
+          createdAt: newUser.createdAt
         },
         token
       }
@@ -67,7 +79,7 @@ const register = async (req, res) => {
     logger.error('Registration error:', error);
     res.status(500).json({
       success: false,
-      error: 'Registration failed'
+      error: error.message || 'Registration failed'
     });
   }
 };
@@ -79,52 +91,57 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user by email
-    const result = await query(
-      'SELECT id, username, email, password_hash, role, is_active FROM users WHERE email = $1',
-      [email]
-    );
+    // Try superadmin first
+    let tokenUser = null;
+    let tokenPayload = null;
+    let role = null;
 
-    if (result.rows.length === 0) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials'
-      });
-    }
-
-    const user = result.rows[0];
-
-    // Check if user is active
-    if (!user.is_active) {
-      return res.status(401).json({
-        success: false,
-        error: 'Account is deactivated'
-      });
-    }
-
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials'
-      });
+    const superAdmin = await SuperAdmin.findByEmail(email);
+    if (superAdmin && await superAdmin.verifyPassword(password)) {
+      await superAdmin.updateLastLogin();
+      tokenUser = superAdmin;
+      tokenPayload = { id: superAdmin.id, type: 'superadmin' };
+      role = 'superadmin';
+    } else {
+      const user = await AdminDepartmentUser.findByEmail(email);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Invalid credentials' });
+      }
+      if (!user.is_active) {
+        return res.status(401).json({ success: false, error: 'Account is deactivated' });
+      }
+      const isPasswordValid = await user.verifyPassword(password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ success: false, error: 'Invalid credentials' });
+      }
+      await user.updateLastLogin();
+      tokenUser = user;
+      tokenPayload = { id: user.id, type: 'department_user' };
+      role = user.role;
     }
 
     // Generate token
-    const token = generateToken(user.id);
+    const token = generateToken(tokenPayload);
 
-    logger.info('User logged in successfully', { userId: user.id, email });
+    logger.info('User logged in successfully', { userId: tokenUser.id, email, role });
 
     res.json({
       success: true,
       message: 'Login successful',
       data: {
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          role: user.role
+        user: tokenPayload.type === 'superadmin' ? {
+          id: tokenUser.id,
+          username: tokenUser.username,
+          email: tokenUser.email,
+          role: 'superadmin'
+        } : {
+          id: tokenUser.id,
+          username: tokenUser.username,
+          email: tokenUser.email,
+          role: tokenUser.role,
+          departmentType: tokenUser.department_type,
+          companyName: tokenUser.company_name,
+          headUser: tokenUser.head_user
         },
         token
       }
@@ -143,20 +160,14 @@ const login = async (req, res) => {
 // @access  Private
 const getProfile = async (req, res) => {
   try {
-    const result = await query(
-      `SELECT id, username, email, role, bio, email_verified, created_at, updated_at
-       FROM users WHERE id = $1`,
-      [req.user.id]
-    );
+    const user = await AdminDepartmentUser.findById(req.user.id);
 
-    if (result.rows.length === 0) {
+    if (!user) {
       return res.status(404).json({
         success: false,
         error: 'User not found'
       });
     }
-
-    const user = result.rows[0];
 
     res.json({
       success: true,
@@ -166,8 +177,10 @@ const getProfile = async (req, res) => {
           username: user.username,
           email: user.email,
           role: user.role,
-          bio: user.bio,
-          emailVerified: user.email_verified,
+          departmentType: user.department_type,
+          companyName: user.company_name,
+          headUser: user.head_user,
+          isActive: user.is_active,
           createdAt: user.created_at,
           updatedAt: user.updated_at
         }

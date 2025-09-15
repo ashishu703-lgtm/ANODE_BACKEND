@@ -1,0 +1,157 @@
+{
+  "info": {
+    "name": "Admin Department Users API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Create Department User",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/department-users",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "department-users"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"john.doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Password@123\",\n  \"departmentType\": \"telesales\",\n  \"companyName\": \"Anode Electric Pvt. Ltd.\",\n  \"role\": \"department_user\",\n  \"headUser\": \"head@example.com\"\n}"
+        }
+      }
+    },
+    {
+      "name": "List Department Users",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/department-users?page=1&limit=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "department-users"],
+          "query": [
+            {"key": "page", "value": "1"},
+            {"key": "limit", "value": "10"}
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Department User By ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/department-users/{{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "department-users", "{{userId}}"]
+        }
+      }
+    },
+    {
+      "name": "Update Department User",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/department-users/{{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "department-users", "{{userId}}"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"johnny\",\n  \"departmentType\": \"marketing_sales\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Update User Status",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/department-users/{{userId}}/status",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "department-users", "{{userId}}", "status"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"isActive\": true\n}"
+        }
+      }
+    },
+    {
+      "name": "Delete Department User",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/department-users/{{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "department-users", "{{userId}}"]
+        }
+      }
+    },
+    {
+      "name": "Get Department Heads",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/department-users/heads/{{companyName}}/{{departmentType}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "department-users", "heads", "{{companyName}}", "{{departmentType}}"]
+        }
+      }
+    },
+    {
+      "name": "Get Users Under Head",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/department-users/under-head/{{headEmail}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "department-users", "under-head", "{{headEmail}}"]
+        }
+      }
+    },
+    {
+      "name": "Get Statistics",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/department-users/stats",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "department-users", "stats"]
+        }
+      }
+    }
+  ]
+}

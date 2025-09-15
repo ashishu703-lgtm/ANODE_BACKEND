@@ -23,21 +23,36 @@ const schemas = {
         'any.required': 'Email is required'
       }),
     password: Joi.string()
-      .min(8)
-      .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]'))
+      .min(6)
       .required()
       .messages({
-        'string.min': 'Password must be at least 8 characters long',
-        'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+        'string.min': 'Password must be at least 6 characters long',
         'any.required': 'Password is required'
       }),
-    confirmPassword: Joi.string()
-      .valid(Joi.ref('password'))
+    departmentType: Joi.string()
+      .valid('telesales', 'marketing_sales', 'office_sales')
       .required()
       .messages({
-        'any.only': 'Passwords must match',
-        'any.required': 'Password confirmation is required'
-      })
+        'any.only': 'Department type must be one of: telesales, marketing_sales, office_sales',
+        'any.required': 'Department type is required'
+      }),
+    companyName: Joi.string()
+      .valid('Anode Electric Pvt. Ltd.', 'Anode Metals', 'Samrridhi Industries')
+      .required()
+      .messages({
+        'any.only': 'Company name must be one of: Anode Electric Pvt. Ltd., Anode Metals, Samrridhi Industries',
+        'any.required': 'Company name is required'
+      }),
+    role: Joi.string()
+      .valid('department_user', 'department_head')
+      .required()
+      .messages({
+        'any.only': 'Role must be one of: department_user, department_head, superadmin',
+        'any.required': 'Role is required'
+      }),
+    headUser: Joi.string()
+      .allow('')
+      .when('role', { is: 'department_user', then: Joi.required().messages({ 'any.required': 'Head user is required for department users' }), otherwise: Joi.optional() })
   }),
 
   // User login
@@ -233,5 +248,28 @@ const validateQuery = (schemaName) => {
 module.exports = {
   validate,
   validateQuery,
-  schemas
+  schemas,
+  // Generic validator that accepts a Joi schema object and validates either body or query
+  validateRequest: (schema, source = 'body') => {
+    return (req, res, next) => {
+      const data = source === 'query' ? req.query : req.body;
+      const { error, value } = schema.validate(data, { abortEarly: false, stripUnknown: true });
+
+      if (error) {
+        const errorMessages = error.details.map(detail => detail.message);
+        return res.status(400).json({
+          success: false,
+          error: source === 'query' ? 'Query validation failed' : 'Validation failed',
+          details: errorMessages
+        });
+      }
+
+      if (source === 'query') {
+        req.query = value;
+      } else {
+        req.body = value;
+      }
+      next();
+    };
+  }
 }; 

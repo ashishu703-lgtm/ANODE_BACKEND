@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
-const { query } = require('../config/database');
+const AdminDepartmentUser = require('../models/AdminDepartmentUser');
+const SuperAdmin = require('../models/SuperAdmin');
 const logger = require('../utils/logger');
 
 // Protect routes - verify JWT token
@@ -21,29 +22,30 @@ const protect = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Get user from database
-    const result = await query(
-      'SELECT id, email, username, role, is_active FROM users WHERE id = $1',
-      [decoded.id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({
-        success: false,
-        error: 'User not found'
-      });
+    if (decoded.type === 'superadmin') {
+      const su = await SuperAdmin.findById(decoded.id);
+      if (!su) {
+        return res.status(401).json({ success: false, error: 'User not found' });
+      }
+      req.user = { id: su.id, email: su.email, username: su.username, role: 'superadmin' };
+    } else {
+      const user = await AdminDepartmentUser.findById(decoded.id);
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'User not found' });
+      }
+      if (!user.is_active) {
+        return res.status(401).json({ success: false, error: 'User account is deactivated' });
+      }
+      req.user = {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        departmentType: user.department_type,
+        companyName: user.company_name,
+        headUser: user.head_user
+      };
     }
-
-    const user = result.rows[0];
-
-    if (!user.is_active) {
-      return res.status(401).json({
-        success: false,
-        error: 'User account is deactivated'
-      });
-    }
-
-    req.user = user;
     next();
   } catch (error) {
     logger.error('Token verification failed', { error: error.message });
@@ -90,15 +92,20 @@ const optionalAuth = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const result = await query(
-      'SELECT id, email, username, role, is_active FROM users WHERE id = $1',
-      [decoded.id]
-    );
-
-    if (result.rows.length > 0 && result.rows[0].is_active) {
-      req.user = result.rows[0];
+    if (decoded.type === 'superadmin') {
+      const su = await SuperAdmin.findById(decoded.id);
+      req.user = su ? { id: su.id, email: su.email, username: su.username, role: 'superadmin' } : null;
     } else {
-      req.user = null;
+      const user = await AdminDepartmentUser.findById(decoded.id);
+      req.user = (user && user.is_active) ? {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        departmentType: user.department_type,
+        companyName: user.company_name,
+        headUser: user.head_user
+      } : null;
     }
   } catch (error) {
     req.user = null;

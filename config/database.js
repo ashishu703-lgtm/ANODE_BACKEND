@@ -1,15 +1,30 @@
 const { Pool } = require('pg');
 const logger = require('../utils/logger');
 
+require('dotenv').config();
+
+const sslRequired = process.env.DB_SSL === 'require' || process.env.DB_SSL === 'true';
+const useConnectionString = !!process.env.DATABASE_URL;
+
+const baseConfig = useConnectionString
+  ? {
+    connectionString: process.env.DATABASE_URL,
+    ssl: sslRequired ? { rejectUnauthorized: false } : false
+  }
+  : {
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT) || 5432,
+    database: process.env.DB_NAME || 'automatic_review_system',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || undefined,
+    ssl: sslRequired ? { rejectUnauthorized: false } : false
+  };
+
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'automatic_review_system',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || undefined,
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
+  ...baseConfig,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000
 });
 
 // Test the connection
@@ -67,4 +82,4 @@ module.exports = {
   query,
   getClient,
   pool
-}; 
+};

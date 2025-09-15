@@ -7,7 +7,7 @@ const router = express.Router();
 
 // All routes require admin authentication
 router.use(protect);
-router.use(authorize('admin'));
+router.use(authorize('admin', 'superadmin'));
 
 // Admin routes
 router.get('/reviews', validateQuery('pagination'), adminController.getAllReviews);

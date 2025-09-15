@@ -10,21 +10,30 @@ const errorHandler = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth');
 const reviewRoutes = require('./routes/reviews');
 const adminRoutes = require('./routes/admin');
+const adminDepartmentUserRoutes = require('./routes/adminDepartmentUsers');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Security middleware
 app.use(helmet());
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? process.env.ALLOWED_ORIGINS?.split(',') : true,
-  credentials: true
-}));
+
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' ? (process.env.ALLOWED_ORIGINS?.split(',') || []) : true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+// Handle CORS preflight requests explicitly
+app.options('*', cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, 
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, 
   message: {
     error: 'Too many requests from this IP, please try again later.'
   }
@@ -38,6 +47,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Welcome page route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client', 'index.html'));
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({
@@ -50,6 +64,8 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/reviews', reviewRoutes);
+// Mount department-users BEFORE general admin routes to avoid unintended authorization blocks
+app.use('/api/admin/department-users', adminDepartmentUserRoutes);
 app.use('/api/admin', adminRoutes);
 
 // 404 handler
