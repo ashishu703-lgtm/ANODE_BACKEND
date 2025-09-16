@@ -1,4 +1,5 @@
 const Joi = require('joi');
+const { validationResult } = require('express-validator');
 
 // Validation schemas
 const schemas = {
@@ -249,26 +250,22 @@ module.exports = {
   validate,
   validateQuery,
   schemas,
-  // Generic validator that accepts a Joi schema object and validates either body or query
-  validateRequest: (schema, source = 'body') => {
-    return (req, res, next) => {
-      const data = source === 'query' ? req.query : req.body;
-      const { error, value } = schema.validate(data, { abortEarly: false, stripUnknown: true });
+  // Express-validator middleware for leads and other express-validator schemas
+  validateRequest: (validations, source = 'body') => {
+    return async (req, res, next) => {
+      // Run all validations
+      await Promise.all(validations.map(validation => validation.run(req)));
 
-      if (error) {
-        const errorMessages = error.details.map(detail => detail.message);
+      // Check for validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
-          error: source === 'query' ? 'Query validation failed' : 'Validation failed',
-          details: errorMessages
+          message: 'Validation failed',
+          errors: errors.array()
         });
       }
 
-      if (source === 'query') {
-        req.query = value;
-      } else {
-        req.body = value;
-      }
       next();
     };
   }
