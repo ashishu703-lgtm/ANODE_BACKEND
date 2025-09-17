@@ -76,10 +76,10 @@ const schemas = {
         'any.required': 'Password is required'
       }),
     departmentType: Joi.string()
-      .valid('telesales', 'marketing_sales', 'office_sales')
+      .valid('marketing_sales', 'office_sales')
       .required()
       .messages({
-        'any.only': 'Department type must be one of: telesales, marketing_sales, office_sales',
+        'any.only': 'Department type must be one of: marketing_sales, office_sales',
         'any.required': 'Department type is required'
       }),
     companyName: Joi.string()
