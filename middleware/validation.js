@@ -1,8 +1,6 @@
 const Joi = require('joi');
 
-// Validation schemas
 const schemas = {
-  // User registration
   register: Joi.object({
     username: Joi.string()
       .alphanum()
@@ -52,7 +50,8 @@ const schemas = {
       }),
     headUser: Joi.string()
       .allow('')
-      .when('role', { is: 'department_user', then: Joi.required().messages({ 'any.required': 'Head user is required for department users' }), otherwise: Joi.optional() })
+      .when('role', { is: 'department_user', then: Joi.required().messages({ 'any.required': 'Head user is required for department users' }), otherwise: Joi.optional() }),
+    monthlyTarget: Joi.number().min(0).optional()
   }),
 
   // User login
@@ -71,7 +70,6 @@ const schemas = {
       })
   }),
 
-  // Review submission
   submitReview: Joi.object({
     title: Joi.string()
       .min(1)
@@ -106,7 +104,6 @@ const schemas = {
       })
   }),
 
-  // Review update
   updateReview: Joi.object({
     title: Joi.string()
       .min(1)
