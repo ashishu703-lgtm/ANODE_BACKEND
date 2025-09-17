@@ -5,7 +5,7 @@ class AdminDepartmentUser extends BaseModel {
   static TABLE_NAME = 'admin_department_users';
   
   static VALID_COMPANIES = ['Anode Electric Pvt. Ltd.', 'Anode Metals', 'Samrridhi Industries'];
-  static VALID_DEPARTMENTS = ['telesales', 'marketing_sales', 'office_sales'];
+  static VALID_DEPARTMENTS = ['marketing_sales', 'office_sales'];
   static VALID_ROLES = ['department_user', 'department_head'];
 
   static async create(userData) {
