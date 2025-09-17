@@ -5,8 +5,6 @@ const { protect } = require('../middleware/auth');
 const { validate } = require('../middleware/validation');
 const { createUserSchema, updateUserSchema, updateStatusSchema, querySchema } = require('../apis/adminDepartmentUsers/validators');
 
-router.use(protect);
-
 router.post('/', validate(createUserSchema), AdminDepartmentUserController.create);
 router.get('/', validate(querySchema, 'query'), AdminDepartmentUserController.getAll);
 router.get('/stats', AdminDepartmentUserController.getStats);
