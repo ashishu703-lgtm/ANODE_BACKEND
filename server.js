@@ -10,7 +10,10 @@ const errorHandler = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth');
 const reviewRoutes = require('./routes/reviews');
 const adminRoutes = require('./routes/admin');
+const departmentHeadRoutes = require('./routes/departmentHeads');
+const departmentUserRoutes = require('./routes/departmentUsers');
 const adminDepartmentUserRoutes = require('./routes/adminDepartmentUsers');
+const leadRoutes = require('./routes/leads');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -64,6 +67,10 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/reviews', reviewRoutes);
+// Mount new department routes BEFORE general admin routes to avoid unintended authorization blocks
+app.use('/api/admin/department-heads', departmentHeadRoutes);
+app.use('/api/admin/department-users', departmentUserRoutes);
+app.use('/api/leads', leadRoutes);
 // Mount department-users BEFORE general admin routes to avoid unintended authorization blocks
 app.use('/api/admin/department-users', adminDepartmentUserRoutes);
 app.use('/api/admin', adminRoutes);
