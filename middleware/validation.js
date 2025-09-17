@@ -2,7 +2,6 @@ const Joi = require('joi');
 const { validationResult } = require('express-validator');
 
 const schemas = {
-  // Department Users schemas
   createUserSchema: Joi.object({
     username: Joi.string().min(3).max(255).required(),
     email: Joi.string().email().required(),
@@ -30,7 +29,6 @@ const schemas = {
     isActive: Joi.boolean().required()
   }),
 
-  // Department Heads schemas
   createHeadSchema: Joi.object({
     username: Joi.string().min(3).max(255).required(),
     email: Joi.string().email().required(),
@@ -255,13 +253,11 @@ const validate = (schemaName) => {
       });
     }
 
-    // Replace req.body with validated data
     req.body = value;
     next();
   };
 };
 
-// Query validation middleware
 const validateQuery = (schemaName) => {
   return (req, res, next) => {
     const schema = schemas[schemaName];
@@ -286,7 +282,6 @@ const validateQuery = (schemaName) => {
       });
     }
 
-    // Replace req.query with validated data
     req.query = value;
     next();
   };
@@ -296,14 +291,11 @@ module.exports = {
   validate,
   validateQuery,
   schemas,
-  // Express-validator middleware for leads and other express-validator schemas
   validateRequest: (validations, source = 'body') => {
     return async (req, res, next) => {
       try {
-        // Ensure validations is an array
         const validationArray = Array.isArray(validations) ? validations : [validations];
         
-        // Run all validations
         await Promise.all(validationArray.map(validation => validation.run(req)));
 
         const errors = validationResult(req);

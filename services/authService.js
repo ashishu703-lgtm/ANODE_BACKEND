@@ -53,11 +53,25 @@ class AuthService {
         throw new Error('Invalid impersonation token');
       }
 
-      let user = await DepartmentHead.findByEmail(email);
-      let userType = 'department_head';
-      if (!user) {
+      let user = null;
+      let userType = null;
+      
+      // If impersonator is department head, prioritize finding as department user
+      if (decoded.type === 'department_head') {
         user = await DepartmentUser.findByEmail(email);
         userType = 'department_user';
+        if (!user) {
+          user = await DepartmentHead.findByEmail(email);
+          userType = 'department_head';
+        }
+      } else {
+        // For superadmin, check department head first
+        user = await DepartmentHead.findByEmail(email);
+        userType = 'department_head';
+        if (!user) {
+          user = await DepartmentUser.findByEmail(email);
+          userType = 'department_user';
+        }
       }
       
       if (!user) {
