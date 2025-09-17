@@ -77,10 +77,6 @@ const createLeadSchema = [
 
 // Validation rules for updating a lead
 const updateLeadSchema = [
-  param('id')
-    .isInt({ min: 1 })
-    .withMessage('Lead ID must be a positive integer'),
-  
   body('name')
     .optional()
     .isLength({ min: 2, max: 255 })

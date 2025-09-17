@@ -2,6 +2,55 @@ const Joi = require('joi');
 const { validationResult } = require('express-validator');
 
 const schemas = {
+  // Department Users schemas
+  createUserSchema: Joi.object({
+    username: Joi.string().min(3).max(255).required(),
+    email: Joi.string().email().required(),
+    password: Joi.string().min(6).required(),
+    target: Joi.number().min(0).required(),
+    departmentType: Joi.string().min(1).max(50).optional(),
+    companyName: Joi.string().min(1).max(255).optional(),
+    headUserId: Joi.string().uuid().optional(),
+    headUserEmail: Joi.string().email().optional()
+  }),
+
+  updateUserSchema: Joi.object({
+    username: Joi.string().min(3).max(255).optional(),
+    email: Joi.string().email().optional(),
+    password: Joi.string().min(6).optional(),
+    departmentType: Joi.string().min(1).max(50).optional(),
+    companyName: Joi.string().min(1).max(255).optional(),
+    headUserId: Joi.string().uuid().optional(),
+    target: Joi.number().min(0).optional(),
+    isActive: Joi.boolean().optional(),
+    emailVerified: Joi.boolean().optional()
+  }),
+
+  updateStatusSchema: Joi.object({
+    isActive: Joi.boolean().required()
+  }),
+
+  // Department Heads schemas
+  createHeadSchema: Joi.object({
+    username: Joi.string().min(3).max(255).required(),
+    email: Joi.string().email().required(),
+    password: Joi.string().min(6).required(),
+    departmentType: Joi.string().min(1).max(50).required(),
+    companyName: Joi.string().min(1).max(255).required(),
+    target: Joi.number().min(0).default(0)
+  }),
+
+  updateHeadSchema: Joi.object({
+    username: Joi.string().min(3).max(255).optional(),
+    email: Joi.string().email().optional(),
+    password: Joi.string().min(6).optional(),
+    departmentType: Joi.string().min(1).max(50).optional(),
+    companyName: Joi.string().min(1).max(255).optional(),
+    target: Joi.number().min(0).optional(),
+    isActive: Joi.boolean().optional(),
+    emailVerified: Joi.boolean().optional()
+  }),
+
   register: Joi.object({
     username: Joi.string()
       .alphanum()
@@ -250,20 +299,31 @@ module.exports = {
   // Express-validator middleware for leads and other express-validator schemas
   validateRequest: (validations, source = 'body') => {
     return async (req, res, next) => {
-      // Run all validations
-      await Promise.all(validations.map(validation => validation.run(req)));
+      try {
+        // Ensure validations is an array
+        const validationArray = Array.isArray(validations) ? validations : [validations];
+        
+        // Run all validations
+        await Promise.all(validationArray.map(validation => validation.run(req)));
 
-      // Check for validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+          return res.status(400).json({
+            success: false,
+            message: 'Validation failed',
+            errors: errors.array()
+          });
+        }
+
+        next();
+      } catch (error) {
+        console.error('Validation middleware error:', error);
+        return res.status(500).json({
           success: false,
-          message: 'Validation failed',
-          errors: errors.array()
+          message: 'Validation middleware error',
+          error: error.message
         });
       }
-
-      next();
     };
   }
 }; 
