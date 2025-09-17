@@ -253,8 +253,13 @@ module.exports = {
   // Express-validator middleware for leads and other express-validator schemas
   validateRequest: (validations, source = 'body') => {
     return async (req, res, next) => {
-      // Run all validations
-      await Promise.all(validations.map(validation => validation.run(req)));
+      // Ensure validations is an array
+      const validationArray = Array.isArray(validations) ? validations : [validations];
+      
+      // Run all validations sequentially
+      for (const validation of validationArray) {
+        await validation.run(req);
+      }
 
       // Check for validation errors
       const errors = validationResult(req);
