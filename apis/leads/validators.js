@@ -3,20 +3,24 @@ const { body, query, param } = require('express-validator');
 // Validation rules for creating a lead
 const createLeadSchema = [
   body('name')
-    .notEmpty()
-    .withMessage('Name is required')
+    .optional()
     .isLength({ min: 2, max: 255 })
     .withMessage('Name must be between 2 and 255 characters'),
   
   body('phone')
-    .notEmpty()
-    .withMessage('Phone number is required')
-    .isMobilePhone('en-IN')
+    .optional()
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') return true;
+      return /^[6-9]\d{9}$/.test(value);
+    })
     .withMessage('Please provide a valid Indian phone number'),
   
   body('email')
     .optional()
-    .isEmail()
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') return true;
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    })
     .withMessage('Please provide a valid email address'),
   
   body('business')
@@ -31,8 +35,7 @@ const createLeadSchema = [
   
   body('gstNo')
     .optional()
-    .matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)
-    .withMessage('Please provide a valid GST number'),
+    .custom((_value) => true),
   
   body('productType')
     .optional()
@@ -56,7 +59,10 @@ const createLeadSchema = [
   
   body('date')
     .optional()
-    .isISO8601()
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') return true;
+      return !isNaN(Date.parse(value));
+    })
     .withMessage('Please provide a valid date'),
   
   body('connectedStatus')
@@ -71,8 +77,26 @@ const createLeadSchema = [
   
   body('whatsapp')
     .optional()
-    .isMobilePhone('en-IN')
-    .withMessage('Please provide a valid WhatsApp number')
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') return true;
+      return /^[6-9]\d{9}$/.test(value);
+    })
+    .withMessage('Please provide a valid WhatsApp number'),
+  
+  body('category')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('Category must not exceed 100 characters'),
+  
+  body('assignedSalesperson')
+    .optional()
+    .isLength({ max: 255 })
+    .withMessage('Assigned salesperson must not exceed 255 characters'),
+  
+  body('assignedTelecaller')
+    .optional()
+    .isLength({ max: 255 })
+    .withMessage('Assigned telecaller must not exceed 255 characters')
 ];
 
 // Validation rules for updating a lead
@@ -84,12 +108,18 @@ const updateLeadSchema = [
   
   body('phone')
     .optional()
-    .isMobilePhone('en-IN')
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') return true;
+      return /^[6-9]\d{9}$/.test(value);
+    })
     .withMessage('Please provide a valid Indian phone number'),
   
   body('email')
     .optional()
-    .isEmail()
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') return true;
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    })
     .withMessage('Please provide a valid email address'),
   
   body('business')
@@ -104,8 +134,7 @@ const updateLeadSchema = [
   
   body('gstNo')
     .optional()
-    .matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)
-    .withMessage('Please provide a valid GST number'),
+    .custom((_value) => true),
   
   body('productType')
     .optional()
@@ -129,7 +158,10 @@ const updateLeadSchema = [
   
   body('date')
     .optional()
-    .isISO8601()
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') return true;
+      return !isNaN(Date.parse(value));
+    })
     .withMessage('Please provide a valid date'),
   
   body('connectedStatus')
@@ -144,8 +176,26 @@ const updateLeadSchema = [
   
   body('whatsapp')
     .optional()
-    .isMobilePhone('en-IN')
-    .withMessage('Please provide a valid WhatsApp number')
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') return true;
+      return /^[6-9]\d{9}$/.test(value);
+    })
+    .withMessage('Please provide a valid WhatsApp number'),
+  
+  body('category')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('Category must not exceed 100 characters'),
+  
+  body('assignedSalesperson')
+    .optional()
+    .isLength({ max: 255 })
+    .withMessage('Assigned salesperson must not exceed 255 characters'),
+  
+  body('assignedTelecaller')
+    .optional()
+    .isLength({ max: 255 })
+    .withMessage('Assigned telecaller must not exceed 255 characters')
 ];
 
 // Validation rules for query parameters
@@ -193,14 +243,12 @@ const importCSVSchema = [
     .withMessage('Leads data must be a non-empty array'),
   
   body('leads.*.name')
-    .notEmpty()
-    .withMessage('Name is required for all leads')
+    .optional()
     .isLength({ min: 2, max: 255 })
     .withMessage('Name must be between 2 and 255 characters'),
   
   body('leads.*.phone')
-    .notEmpty()
-    .withMessage('Phone number is required for all leads')
+    .optional()
     .isMobilePhone('en-IN')
     .withMessage('Please provide a valid Indian phone number for all leads'),
   
@@ -221,8 +269,7 @@ const importCSVSchema = [
   
   body('leads.*.gstNo')
     .optional()
-    .matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)
-    .withMessage('Please provide valid GST numbers'),
+    .custom((_value) => true),
   
   body('leads.*.productType')
     .optional()
@@ -262,7 +309,22 @@ const importCSVSchema = [
   body('leads.*.whatsapp')
     .optional()
     .isMobilePhone('en-IN')
-    .withMessage('Please provide valid WhatsApp numbers')
+    .withMessage('Please provide valid WhatsApp numbers'),
+  
+  body('leads.*.category')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('Category must not exceed 100 characters'),
+  
+  body('leads.*.assignedSalesperson')
+    .optional()
+    .isLength({ max: 255 })
+    .withMessage('Assigned salesperson must not exceed 255 characters'),
+  
+  body('leads.*.assignedTelecaller')
+    .optional()
+    .isLength({ max: 255 })
+    .withMessage('Assigned telecaller must not exceed 255 characters')
 ];
 
 // Validation rules for ID parameter
